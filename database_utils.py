@@ -45,10 +45,20 @@ class DatabaseConnector:
                 print(e)         
         return conn
 
-    def upload_to_db(self):
-        # take in a Pandas DataFrame and table name to upload to as an argument.
-        # Once extracted and cleaned use the upload_to_db method to store the data in your sales_data database in a table named dim_users
-        pass
+    def upload_to_db(self,dataframe,name):
+        print('inside upload to db')
+        print(dataframe)
+        print(type(dataframe))
+        print(name)
+        conn = self.init_db_engine()
+        df = dataframe
+        # Specify the table name where to load the data
+        table_name = name
+        # Write the DataFrame to the PostgreSQL table
+        df.to_sql(name=table_name, con=conn, index=False )      
+        # Commit and close the connection
+        conn.commit()
+        conn.close()
 
 if  __name__ == "__main__": 
     print("Calling a function from a Class")
