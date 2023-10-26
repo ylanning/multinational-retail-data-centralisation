@@ -1,5 +1,6 @@
 from database_utils import DatabaseConnector
 import psycopg2
+import tabula
 import pandas as pd
 from sqlalchemy import inspect, text
 
@@ -50,6 +51,13 @@ class DataExtractor:
                 tables_df[table] = df
 
         return tables_df
-    
+
+    def retrieve_pdf_data(self,pdf_path):
+        # read pdf returns list of Dataframe
+        tables = tabula.read_pdf(pdf_path, pages="all", multiple_tables=True)
+        return tables
+
+
 # data = DataExtractor()
-# print(data.read_rds_table())
+# file_path = './card_details.pdf'
+# print(data.retrieve_pdf_data(file_path))

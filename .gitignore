@@ -1,1 +1,4 @@
 db_creds.yaml 
+sales_data_env.yaml
+.vscode/
+__pycache__/*
