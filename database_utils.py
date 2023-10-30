@@ -51,7 +51,7 @@ class DatabaseConnector:
         
             except Exception as e:
                 print(e)         
-        return conn
+            return conn
 
     def upload_to_db(self,table_name,dataframe):
         print('inside upload to db')
