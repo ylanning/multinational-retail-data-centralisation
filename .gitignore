@@ -1,5 +1,7 @@
 db_creds.yaml 
 sales_data_env.yaml
 .vscode/
-*.pyc
-*/tempCodeRunnerFile.py
+__pycache__/data_extraction.cpython-311.pyc
+__pycache__/database_utils.cpython-311.pyc
+tempCodeRunnerFile.py
+postgres.session.sql

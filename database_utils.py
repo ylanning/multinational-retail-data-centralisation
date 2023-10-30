@@ -3,7 +3,7 @@ import pandas as pd
 import yaml
 from sqlalchemy import create_engine, text
 
-util_file = './ db_creds.yaml'
+util_file = './db_creds.yaml'
 db_file = './sales_data_env.yaml'
 
 class DatabaseConnector:
