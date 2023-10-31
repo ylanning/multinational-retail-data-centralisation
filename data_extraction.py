@@ -1,10 +1,11 @@
 import tabula
 import pandas as pd
 import requests
-import json
+import boto3
 
 from database_utils import DatabaseConnector
 from sqlalchemy import inspect, text
+from io import StringIO
 
 
 class DataExtractor:
@@ -35,7 +36,7 @@ class DataExtractor:
 
     def read_rds_table(self):
         """
-        extract the database table to a pandas DataFrame
+        extract the database table to a pandas DataFramev  
         """
         tables = self.list_db_tables()
         # table named will be returned as a dataframe.
@@ -106,10 +107,55 @@ class DataExtractor:
                 print(f"Response Text: {response.text}")
         return stores_data
 
-# data = DataExtractor()
-# file_path = './card_details.pdf'
-# print(data.retrieve_pdf_data(file_path))
-# headers = {"x-api-key" : "yFBQbwXe9J3sd6zWVAMrK6lcxxr0q1lr2PT6DDMX"}
-# api_test = DataExtractor()
-# run_api = api_test.retrieve_stores_data(headers)
-# print(run_api)
+    def extract_from_s3(self, s3_address):
+        s3 = boto3.client('s3')
+
+        # Extract the bucket name and object key from the S3 address
+        bucket, key = s3_address.replace('s3://', '').split('/', 1)
+        print("bucket :", bucket)
+        print("key :", key)
+
+        try:
+            # Download the object from S3
+            response = s3.get_object(Bucket=bucket, Key=key)
+            content = response['Body'].read().decode('utf-8')
+
+            # convert the csv content to a Pandas DataFrame
+            df = pd.read_csv(StringIO(content))
+            
+            return df
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
+
+    def extract_from_s3_json(self, s3_url):
+      
+        # Split the S3 URL into its components
+        s3_parts = s3_url.split('/')
+        bucket_name = s3_parts[2].split('.')[0]  # 'data-handling-public'
+        aws_region = s3_parts[2].split('.')[2] # 'eu-west-1'
+        file_key = s3_parts[-1] # 'date_details.json'
+        print("Bucket Name:", bucket_name)
+        print("AWS Region:", aws_region)
+        print("File Key:", file_key)
+        
+        s3 = boto3.client('s3', region_name=aws_region)
+         # # Download the file from S3
+        s3.download_file(bucket_name, file_key, "date_details.json")
+
+        # # Read the downloaded JSON file into a pandas DataFrame
+        df = pd.read_json("date_details.json")
+
+        return df  
+    
+        
+
+if __name__ == "__main__":
+    extractor = DataExtractor()
+    data_frame = extractor.extract_from_s3()
+
+    if data_frame is not None:
+        print(data_frame.info())
+        print(data_frame['weight'].head(200))
+    else:
+        print("Failed to extract data from s3.")

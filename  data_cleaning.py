@@ -1,6 +1,7 @@
 import psycopg2
 import pandas as pd
 import re
+import boto3
 from data_extraction import DataExtractor
 from database_utils import DatabaseConnector
 
@@ -137,6 +138,68 @@ class DataCleaning:
 
         final_stores_data = pd.concat(stores, axis=0)
         self.upload_data('dim_store_details', final_stores_data)
-                      
-data = DataCleaning()
-print(data.called_clean_store_data())
+
+    def convert_product_weight_and_float(self, datas):
+        """
+        method to clean up the weight column and remove all excess characters then represent the weights as a float.
+        """
+        if 'g' in datas or 'ml' in datas :
+            # Convert from grams to kilograms ( 1g = 0.001 kg)
+            converted_data = float(re.sub(r'\D', '', datas)) / 1000
+            return converted_data
+        else:
+            return float(re.sub(r'\D', '', datas))
+
+    def clean_non_char(self,dataframe):
+        cleaned_non_char = re.sub(r'\W', ' ', dataframe)
+        return cleaned_non_char
+            
+    def clean_product_data(self):
+        s3_address = "s3://data-handling-public/products.csv"
+        df = self.datas.extract_from_s3(s3_address)
+        
+        # cleaned any missing values
+        filtered_df = df.replace(['NaN','N/A','null','NULL'], pd.NA)
+        new_df = filtered_df.dropna(how='any')
+        
+        new_df['weight_in_kg'] = new_df['weight'].apply(self.convert_product_weight_and_float)
+        new_df['product_price_in_£'] = new_df['product_price'].apply(self.convert_product_weight_and_float)
+        new_df['category'] = new_df['category'].apply(self.clean_non_char)
+        new_df['date_added'] = new_df['date_added'].apply(self.convert_date)
+
+        self.upload_data('dim_products', new_df)
+
+    def clean_orders_data(self):
+        tables = self.datas.read_rds_table()
+
+        if 'orders_table' in tables:
+            table_data = tables['orders_table']
+
+            # columns that need to be removed
+            columns_to_remove = ['first_name','last_name', '1']
+
+            # Drop the specified columns
+            table_data.drop(columns=columns_to_remove, axis=1, inplace=True)
+
+            # Upload the cleaned data
+            self.upload_data('orders_table', table_data)
+
+        return table_data
+
+    def clean_date_times(self):
+        s3_address = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json'
+        date_times = self.datas.extract_from_s3_json(s3_address)
+        self.upload_data('dim_date_times', date_times)
+        return date_times
+
+    
+if __name__ == "__main__":                      
+    data = DataCleaning()
+    products = data.clean_date_times()
+
+    if products is not None:
+        # print(products)
+        print(products.head())
+        print(products.info())
+    else:
+        print("Failed to extract data")
