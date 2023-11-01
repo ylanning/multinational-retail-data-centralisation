@@ -103,6 +103,44 @@ class DatabaseConnector:
             cur.close()
             conn.close()
 
+    def connect_to_db(self):
+        # initialise db params
+        db_params = self.db_params()
+
+        if db_params:
+            host = 'localhost'
+            database = db_params['database']
+            user = db_params['user']
+            password = db_params['password']
+            port = db_params['port']
+            
+            # Create a connection to the PostgreSQL server
+            try:
+                conn = psycopg2.connect(    
+                    host=host,
+                    database=database,
+                    user=user,
+                    password=password,
+                    port=port
+                )
+                print(conn)
+                print("it's connected")
+                # Create a cursor object
+                cur = conn.cursor()
+                # Set automatic commit to be true, so that each action is committed without having to call conn.commit() after each command
+                conn.set_session(autocommit=True)     
+
+                # # Close cursor and communication with the database
+                # cur.close()
+                # conn.close()
+                 
+            except Exception as e:
+                print("failed to make connection")
+                print(e)  
+                
+        return cur
+        
+
 if  __name__ == "__main__": 
     print("Calling a function from a Class")
     utils_one = DatabaseConnector()

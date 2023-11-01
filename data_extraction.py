@@ -14,8 +14,7 @@ class DataExtractor:
     The methods contained will be fit to extract data from a particular data source, 
     these sources will include CSV files, an API and an S3 bucket.
     """
-  
-
+    
     def __init__(self):
     
         print('inside data extractor')
@@ -112,9 +111,7 @@ class DataExtractor:
 
         # Extract the bucket name and object key from the S3 address
         bucket, key = s3_address.replace('s3://', '').split('/', 1)
-        print("bucket :", bucket)
-        print("key :", key)
-
+       
         try:
             # Download the object from S3
             response = s3.get_object(Bucket=bucket, Key=key)

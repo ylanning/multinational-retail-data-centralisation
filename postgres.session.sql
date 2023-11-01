@@ -1,1 +1,1 @@
-SELECT * FROM dim_card_details;
+SELECT country_code FROM dim_users;
