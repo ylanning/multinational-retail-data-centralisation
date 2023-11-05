@@ -1,1 +1,6 @@
-SELECT country_code FROM dim_users;
+SELECT *
+FROM orders_table;
+
+
+
+

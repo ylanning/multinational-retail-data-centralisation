@@ -106,6 +106,7 @@ class DataCleaning:
                       
     def clean_user_data(self):
         tables = self.datas.read_rds_table()
+        print("tables :", tables)
 
         if 'legacy_users' in tables:
             table_data = tables['legacy_users']
@@ -120,7 +121,7 @@ class DataCleaning:
             # Remove duplicate rows based on all columns
             nodup_table_data = table_data.drop_duplicates()
             
-            # Replace NaN values with 0
+            # # Replace NaN values with 0
             cleaned_table_data = nodup_table_data.dropna()
         
             self.upload_data("dim_users", cleaned_table_data)
@@ -238,48 +239,44 @@ class DataCleaning:
         
         return date_times
 
-    def alter_order_table_dtype(self):
+    def change_dtype(self, table, column, type):
         cur = self.db_connector.connect_to_db()
         try:
-            cur.execute("ALTER TABLE orders_table ALTER COLUMN date_uuid TYPE UUID USING date_uuid::UUID")
-            cur.execute("ALTER TABLE orders_table ALTER COLUMN user_uuid TYPE UUID USING date_uuid::UUID")
-            cur.execute("ALTER TABLE orders_table ALTER COLUMN card_number TYPE VARCHAR(16) USING card_number::VARCHAR(16)")
-            cur.execute("ALTER TABLE orders_table ALTER COLUMN store_code TYPE VARCHAR(16) USING store_code::VARCHAR(16)")
-            cur.execute("ALTER TABLE orders_table ALTER COLUMN product_code TYPE VARCHAR(16) USING product_code::VARCHAR(16)")
-            cur.execute("ALTER TABLE orders_table ALTER COLUMN product_quantity TYPE SMALLINT USING product_quantity::SMALLINT")
-        except Exception as e:
-            print(f"Failed to execute {e}")   
-        cur.close()
-
-    def alter_dim_users_table_dtype(self):
-        cur = self.db_connector.connect_to_db()
-        try:
-            cur.execute("ALTER TABLE dim_users ALTER COLUMN first_name TYPE VARCHAR(255) USING first_name::VARCHAR(255)")
-            cur.execute("ALTER TABLE dim_users ALTER COLUMN last_name TYPE VARCHAR(255) USING last_name::VARCHAR(255)")
-            cur.execute("ALTER TABLE dim_users ALTER COLUMN date_of_birth TYPE DATE USING date_of_birth::DATE")
-            cur.execute("ALTER TABLE dim_users ALTER COLUMN country_code TYPE VARCHAR(2) USING country_code::VARCHAR(2)")
-            cur.execute("ALTER TABLE dim_users ALTER COLUMN user_uuid TYPE UUID USING user_uuid::UUID")
-            cur.execute("ALTER TABLE dim_users ALTER COLUMN join_date TYPE DATE USING join_date::DATE")
-        except Exception as e:
-             print(f"Failed to execute {e}")  
-        cur.close()
-
-    def alter_store_details_dtype(self):
-        cur = self.db_connector.connect_to_db()
-        try:
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN longitude TYPE FLOAT USING longitude::FLOAT")
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN locality TYPE VARCHAR(255) USING locality::VARCHAR(255)")
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN store_code TYPE VARCHAR(16) USING store_code::VARCHAR(16)")
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN staff_numbers TYPE SMALLINT USING staff_numbers::SMALLINT")
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN opening_date TYPE DATE USING opening_date::DATE")
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN store_type TYPE VARCHAR(255) USING store_type::VARCHAR(255)")
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN latitude TYPE FLOAT USING latitude::FLOAT")
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN country_code TYPE VARCHAR(2) USING country_code::VARCHAR(2)")
-            cur.execute("ALTER TABLE dim_store_details ALTER COLUMN continent TYPE VARCHAR(255) USING continent::VARCHAR(255)")
+            cur.execute(cur.execute(f"""ALTER TABLE {table} 
+                                        ALTER COLUMN {column} 
+                                        TYPE {type}
+                                        USING {column}::{type}"""))
         except Exception as e:
             print(f"Failed to execute {e}")  
         cur.close()
-
+        
+    def alter_order_table_dtype(self):
+        self.change_dtype('orders_table','date_uuid','UUID')
+        self.change_dtype('orders_table','user_uuid','UUID')
+        self.change_dtype('orders_table','card_number','VARCHAR(16)')
+        self.change_dtype('orders_table','store_code','VARCHAR(16)')
+        self.change_dtype('orders_table','product_code','VARCHAR(16)')
+        self.change_dtype('orders_table','product_quantity','SMALLINT')
+            
+    def alter_dim_users_table_dtype(self):
+        self.change_dtype('dim_users','first_name','VARCHAR(255')
+        self.change_dtype('dim_users','last_name','VARCHAR(255')
+        self.change_dtype('dim_users','date_of_birth','DATE')
+        self.change_dtype('dim_users','country_code','VARCHAR(2)')
+        self.change_dtype('dim_users','user_uuid','UUID')
+        self.change_dtype('dim_users','join_date','DATE')
+        
+    def alter_store_details_dtype(self):
+        self.change_dtype('dim_store_details','longitude','FLOAT')
+        self.change_dtype('dim_store_details','locality','VARCHAR(255)')
+        self.change_dtype('dim_store_details','store_code','VARCHAR(16)')
+        self.change_dtype('dim_store_details','staff_numbers','SMALLINT')
+        self.change_dtype('dim_store_details','opening_date','DATE')
+        self.change_dtype('dim_store_details','store_type','VARCHAR(255)') 
+        self.change_dtype('dim_store_details','latitude','FLOAT') 
+        self.change_dtype('dim_store_details','country_code','VARCHAR(2)') 
+        self.change_dtype('dim_store_details','continent','VARCHAR(255)') 
+         
     def alter_dim_products_table(self):
         cur = self.db_connector.connect_to_db()
         try:
@@ -315,51 +312,109 @@ class DataCleaning:
                             DROP COLUMN removed;""")
             
             # Changing its data type
-            cur.execute("""ALTER TABLE dim_products ALTER COLUMN product_price_in_£ TYPE FLOAT USING product_price_in_£::FLOAT""") 
-            cur.execute("""ALTER TABLE dim_products ALTER COLUMN weight_in_kg TYPE FLOAT USING weight_in_kg::FLOAT""")
-            # cur.execute("""ALTER TABLE dim_products ALTER COLUMN EAN TYPE VARCHAR(16) USING EAN::VARCHAR(16)""") 
-            cur.execute("""ALTER TABLE dim_products ALTER COLUMN product_code TYPE VARCHAR(16) USING product_code::VARCHAR(16)""")
-            cur.execute("""ALTER TABLE dim_products ALTER COLUMN date_added TYPE DATE USING date_added::DATE""")
-            cur.execute("""ALTER TABLE dim_products ALTER COLUMN date_uuid TYPE UUID USING date_uuid::UUID""")
-            
+            self.change_dtype('dim_products','product_price_in_£','FLOAT')
+            self.change_dtype('dim_products','weight_in_kg','FLOAT')
+            # self.change_dtype('dim_products','EAN','VARCHAR(16)')
+            self.change_dtype('dim_products','product_code','VARCHAR(16)')
+            self.change_dtype('dim_products','date_added','DATE')
+            self.change_dtype('dim_products','date_uuid','UUID')
             
         except Exception as e:
             print(f"Failed to execute {e}")  
         cur.close()
 
     def alter_dim_date_times_dtype(self):
-        cur = self.db_connector.connect_to_db()
-        try:
-            cur.execute("""ALTER TABLE dim_date_times ALTER COLUMN month TYPE VARCHAR(2) USING month::VARCHAR(2)""")
-            cur.execute("""ALTER TABLE dim_date_times ALTER COLUMN year TYPE VARCHAR(4) USING year::VARCHAR(4)""")
-            cur.execute("""ALTER TABLE dim_date_times ALTER COLUMN day TYPE VARCHAR(2) USING day::VARCHAR(2)""")
-            cur.execute("""ALTER TABLE dim_date_times ALTER COLUMN time_period TYPE VARCHAR(12) USING time_period::VARCHAR(12)""")
-            cur.execute("""ALTER TABLE dim_date_times ALTER COLUMN date_uuid TYPE UUID USING date_uuid::UUID""")
-
-        except Exception as e:
-            print(f"Failed to execute {e}")  
-        cur.close()
+        self.change_dtype('dim_date_times','month','VARCHAR(2)')
+        self.change_dtype('dim_date_times','year','VARCHAR(4)')
+        self.change_dtype('dim_date_times','day','VARCHAR(2)')
+        self.change_dtype('dim_date_times','time_period','VARCHAR(12)')
+        self.change_dtype('dim_date_times','date_uuid','UUID')
 
     def alter_dim_card_details_dtype(self):
+        self.change_dtype('dim_card_details','card_number','VARCHAR(18)')
+        self.change_dtype('dim_card_details','expiry_date','VARCHAR(5)')
+        self.change_dtype('dim_card_details','date_payment_confirmed','DATE')
+
+        
+    def find_disperancies_data(self,table,column):
+        cur = self.db_connector.connect_to_db()
+        missing_vals = list()
+        # Find any disperancies between the 2 tables
+        cur.execute(f"""SELECT DISTINCT orders_table.{column}
+                        FROM orders_table
+                        LEFT JOIN {table}
+                        ON orders_table.{column} = {table}.{column}
+                        WHERE {table}.{column} IS NULL """)
+        
+        # Add all the missing values into lists
+        for tab in cur.fetchall():
+            value = [value for value in tab]
+            missing_vals.extend(value)  
+            
+        # Insert missing value into the table  
+        if missing_vals:
+            for val in missing_vals:
+                cur.execute(f"INSERT INTO {table}({column}) VALUES ('{val}')")
+
+    def add_primary_key_constraint(self,table,column):
         cur = self.db_connector.connect_to_db()
         try:
-            cur.execute("""ALTER TABLE dim_card_details ALTER COLUMN card_number TYPE VARCHAR(18) USING card_number::VARCHAR(18)""")
-            cur.execute("""ALTER TABLE dim_card_details ALTER COLUMN expiry_date TYPE VARCHAR(5) USING expiry_date::VARCHAR(5)""")
-            cur.execute("""ALTER TABLE dim_card_details ALTER COLUMN date_payment_confirmed TYPE DATE USING date_payment_confirmed::DATE""")
+            cur.execute(f""" SELECT DISTINCT orders_table.{column}
+                            FROM orders_table
+                            LEFT JOIN {table}
+                            ON orders_table.{column} = {table}.{column}
+                            WHERE {table}.{column} IS NULL""")
+
         except Exception as e:
             print(f"Failed to execute {e}")  
-        cur.close()
+        cur.close() 
+
+                          
+    def update_tables_primary_key(self):
+        cur = self.db_connector.connect_to_db()
+        tables = list()
         
-        
+        try:
+            cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';""")
+            for tab in cur.fetchall():
+                table = [table for table in tab]
+                tables.extend(table)
+
+            for table in tables:
+                if 'dim_card_details' in table:
+                    self.find_disperancies_data(table[0],'card_number')
+                    self.add_primary_key_constraint(table[0],'card_number')
+    
+                if 'dim_users' in table:
+                    print('table :', table)
+                    self.find_disperancies_data(table[0],'user_uuid')
+                    self.add_primary_key_constraint(table[0],'user_uuid')
+                    
+                if 'dim_date_times' in table:
+                    self.find_disperancies_data(table[0], 'date_uuid')
+                    self.add_primary_key_constraint(table[0], 'date_uuid')
+                    
+                if 'dim_products' in table:
+                    self.find_disperancies_data(table[0],'product_code')
+                    self.add_primary_key_constraint(table[0],'product_code')
+     
+                if 'dim_store_details' in table:
+                    self.find_disperancies_data(table[0], 'store_code')
+                    self.add_primary_key_constraint(table[0], 'store_code')
+
+        except Exception as e:
+            print(f"Failed to execute {e}")  
+        cur.close()                 
+                
 if __name__ == "__main__":                      
     data = DataCleaning()
-    # clean = data.clean_date_times()
-    products = data.alter_dim_card_details_dtype()
+    # clean = data.clean_orders_data()
+    products = data.create_dim_tables_primary_key()
 
     # if products is not None:
-    #     # print(products)s
+    #     print(products)
     #     print(products.head())
-    #     print(products['card_number'])
-    #     print(products['store_code'])
+    #     # print(products['card_number'])
+    #     # print(products['store_code'])
     # else:
     #     print("Failed to extract data")
