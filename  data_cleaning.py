@@ -1,4 +1,3 @@
-import psycopg2
 import pandas as pd
 import re
 import uuid
@@ -106,7 +105,7 @@ class DataCleaning:
                       
     def clean_user_data(self):
         tables = self.datas.read_rds_table()
-        print("tables :", tables)
+        print("inside clean user data")
 
         if 'legacy_users' in tables:
             table_data = tables['legacy_users']
@@ -125,8 +124,10 @@ class DataCleaning:
             cleaned_table_data = nodup_table_data.dropna()
         
             self.upload_data("dim_users", cleaned_table_data)
+            print('finished cleaning user data')
 
     def clean_card_data(self):
+        print('inside clean card data')
         file_path = './card_details.pdf'
         tables = self.datas.retrieve_pdf_data(file_path)
         datas = list()
@@ -142,8 +143,10 @@ class DataCleaning:
         final_data.reset_index(drop=True, inplace=True)
         
         self.upload_data("dim_card_details", final_data)
+        print('finish clean card data')
 
     def clean_store_data(self):
+        print('inside clean store data')
         # cleans the data retrieve from the API and 
         # returns a pandas DataFrame
         headers = {
@@ -184,18 +187,16 @@ class DataCleaning:
             
             # remove duplicates
             col_cleaned = self.clean_duplicates(cleaned_date)
-
-            # change columns datatype
-            col_cleaned['longitude'] = col_cleaned['longitude'].astype('float64')
-            col_cleaned['latitude'] = col_cleaned['latitude'].astype('float64')
             
             stores.append(col_cleaned)
 
         final_stores_data = pd.concat(stores, axis=0)
         self.upload_data('dim_store_details', final_stores_data)
+        print('finish clean store data')
 
                 
     def clean_product_data(self):
+        print('inside clean product data')
         s3_address = "s3://data-handling-public/products.csv"
         df = self.datas.extract_from_s3(s3_address)
         
@@ -211,8 +212,10 @@ class DataCleaning:
         new_df = new_df.dropna(subset=['uuid'])
 
         self.upload_data('dim_products', new_df)
+        print('finish clean product data')
 
     def clean_orders_data(self):
+        print('inside clean orders data')
         tables = self.datas.read_rds_table()
 
         if 'orders_table' in tables:
@@ -226,9 +229,9 @@ class DataCleaning:
 
             # Upload the cleaned data
             self.upload_data('orders_table', table_data)
-
+        print('finish clean orders data')
         return table_data
-
+    
     def clean_date_times(self):
         s3_address = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json'
         date_times = self.datas.extract_from_s3_json(s3_address)
@@ -236,21 +239,28 @@ class DataCleaning:
         date_times = date_times.dropna(subset=['date_uuid'])
         
         self.upload_data('dim_date_times', date_times)
-        
         return date_times
 
     def change_dtype(self, table, column, type):
+        print('inside change dtype function')
+        print('table :', table)
+        print('column :', column)
+        print('dtype :', type)
+
         cur = self.db_connector.connect_to_db()
+                         
+        query = f"""ALTER TABLE {table}
+                    ALTER COLUMN {column} 
+                    SET DATA TYPE {type}
+                    USING {column}::{type};"""
         try:
-            cur.execute(cur.execute(f"""ALTER TABLE {table} 
-                                        ALTER COLUMN {column} 
-                                        TYPE {type}
-                                        USING {column}::{type}"""))
+            cur.execute(cur.execute(query))
         except Exception as e:
             print(f"Failed to execute {e}")  
         cur.close()
         
     def alter_order_table_dtype(self):
+        print('inside alter order table')
         self.change_dtype('orders_table','date_uuid','UUID')
         self.change_dtype('orders_table','user_uuid','UUID')
         self.change_dtype('orders_table','card_number','VARCHAR(16)')
@@ -259,25 +269,28 @@ class DataCleaning:
         self.change_dtype('orders_table','product_quantity','SMALLINT')
             
     def alter_dim_users_table_dtype(self):
-        self.change_dtype('dim_users','first_name','VARCHAR(255')
-        self.change_dtype('dim_users','last_name','VARCHAR(255')
+        print('inside alter dim users table')
+        self.change_dtype('dim_users','first_name','VARCHAR(255)')
+        self.change_dtype('dim_users','last_name','VARCHAR(255)')
         self.change_dtype('dim_users','date_of_birth','DATE')
         self.change_dtype('dim_users','country_code','VARCHAR(2)')
         self.change_dtype('dim_users','user_uuid','UUID')
         self.change_dtype('dim_users','join_date','DATE')
         
     def alter_store_details_dtype(self):
-        self.change_dtype('dim_store_details','longitude','FLOAT')
+        print('inside alter store details table')
+        self.change_dtype('dim_store_details','longitude','FLOAT(24)')
         self.change_dtype('dim_store_details','locality','VARCHAR(255)')
         self.change_dtype('dim_store_details','store_code','VARCHAR(16)')
         self.change_dtype('dim_store_details','staff_numbers','SMALLINT')
         self.change_dtype('dim_store_details','opening_date','DATE')
         self.change_dtype('dim_store_details','store_type','VARCHAR(255)') 
-        self.change_dtype('dim_store_details','latitude','FLOAT') 
+        self.change_dtype('dim_store_details','latitude','FLOAT(24)') 
         self.change_dtype('dim_store_details','country_code','VARCHAR(2)') 
         self.change_dtype('dim_store_details','continent','VARCHAR(255)') 
          
     def alter_dim_products_table(self):
+        print('inside alter dim products table')
         cur = self.db_connector.connect_to_db()
         try:
             # create a new weight_class column in the table
@@ -312,8 +325,8 @@ class DataCleaning:
                             DROP COLUMN removed;""")
             
             # Changing its data type
-            self.change_dtype('dim_products','product_price_in_£','FLOAT')
-            self.change_dtype('dim_products','weight_in_kg','FLOAT')
+            self.change_dtype('dim_products','product_price_in_£','FLOAT(24)')
+            self.change_dtype('dim_products','weight_in_kg','FLOAT(24)')
             # self.change_dtype('dim_products','EAN','VARCHAR(16)')
             self.change_dtype('dim_products','product_code','VARCHAR(16)')
             self.change_dtype('dim_products','date_added','DATE')
@@ -322,8 +335,10 @@ class DataCleaning:
         except Exception as e:
             print(f"Failed to execute {e}")  
         cur.close()
+        print('finish altering')
 
     def alter_dim_date_times_dtype(self):
+        print('inside alter dim date times table')
         self.change_dtype('dim_date_times','month','VARCHAR(2)')
         self.change_dtype('dim_date_times','year','VARCHAR(4)')
         self.change_dtype('dim_date_times','day','VARCHAR(2)')
@@ -331,12 +346,14 @@ class DataCleaning:
         self.change_dtype('dim_date_times','date_uuid','UUID')
 
     def alter_dim_card_details_dtype(self):
+        print('inside alter dim card details table')
         self.change_dtype('dim_card_details','card_number','VARCHAR(18)')
         self.change_dtype('dim_card_details','expiry_date','VARCHAR(5)')
         self.change_dtype('dim_card_details','date_payment_confirmed','DATE')
 
         
     def find_disperancies_data(self,table,column):
+        print('inside find diperancies data')
         cur = self.db_connector.connect_to_db()
         missing_vals = list()
         # Find any disperancies between the 2 tables
@@ -350,30 +367,59 @@ class DataCleaning:
         for tab in cur.fetchall():
             value = [value for value in tab]
             missing_vals.extend(value)  
-            
+
+        print('missing vals :', missing_vals)  
         # Insert missing value into the table  
         if missing_vals:
             for val in missing_vals:
                 cur.execute(f"INSERT INTO {table}({column}) VALUES ('{val}')")
 
-    def add_primary_key_constraint(self,table,column):
+    def check_duplicate(self,table, column):
+        print('inside check duplicate')
         cur = self.db_connector.connect_to_db()
-        try:
-            cur.execute(f""" SELECT DISTINCT orders_table.{column}
-                            FROM orders_table
-                            LEFT JOIN {table}
-                            ON orders_table.{column} = {table}.{column}
-                            WHERE {table}.{column} IS NULL""")
+        delete_query = f"""DELETE FROM orders_table AS a
+                        USING orders_table AS b
+                        WHERE a.id > b.id
+                        AND a.{column} = b.{column};"""
+        cur.execute(delete_query)
 
+        delete_dim_query = f"""DELETE FROM {table} AS a
+                        USING {table} AS b
+                        WHERE a.id > b.id
+                        AND a.{column} = b.{column};"""
+
+        cur.execute(delete_dim_query)
+        cur.close()
+
+    def add_primary_key_constraint(self,table,column):
+        self.check_duplicate(table, column)
+        cur = self.db_connector.connect_to_db()
+
+        print('table', table)
+        print('column', column)
+ 
+        # Add a unique primary key constraint
+        query = f"""ALTER TABLE {table}
+                    ADD CONSTRAINT unique_{column} 
+                    UNIQUE ({column})"""
+        cur.execute(query)
+        print(query)
+
+        query = f"""ALTER TABLE orders_table
+                    ADD CONSTRAINT fk_{table}
+                    FOREIGN KEY ({column}) 
+                    REFERENCES {table}({column});
+                """
+        print(query)
+        try:
+            cur.execute(query)
         except Exception as e:
             print(f"Failed to execute {e}")  
         cur.close() 
-
                           
     def update_tables_primary_key(self):
         cur = self.db_connector.connect_to_db()
         tables = list()
-        
         try:
             cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';""")
             for tab in cur.fetchall():
@@ -382,39 +428,46 @@ class DataCleaning:
 
             for table in tables:
                 if 'dim_card_details' in table:
-                    self.find_disperancies_data(table[0],'card_number')
-                    self.add_primary_key_constraint(table[0],'card_number')
+                    self.find_disperancies_data(table,'card_number')
+                    self.add_primary_key_constraint(table,'card_number')
     
                 if 'dim_users' in table:
-                    print('table :', table)
-                    self.find_disperancies_data(table[0],'user_uuid')
-                    self.add_primary_key_constraint(table[0],'user_uuid')
+                    self.find_disperancies_data(table,'user_uuid')
+                    self.add_primary_key_constraint(table,'user_uuid')
                     
                 if 'dim_date_times' in table:
-                    self.find_disperancies_data(table[0], 'date_uuid')
-                    self.add_primary_key_constraint(table[0], 'date_uuid')
+                    self.find_disperancies_data(table,'date_uuid')
+                    self.add_primary_key_constraint(table,'date_uuid')
                     
                 if 'dim_products' in table:
-                    self.find_disperancies_data(table[0],'product_code')
-                    self.add_primary_key_constraint(table[0],'product_code')
+                    self.find_disperancies_data(table,'product_code')
+                    self.add_primary_key_constraint(table,'product_code')
      
                 if 'dim_store_details' in table:
-                    self.find_disperancies_data(table[0], 'store_code')
-                    self.add_primary_key_constraint(table[0], 'store_code')
+                    self.find_disperancies_data(table,'store_code')
+                    self.add_primary_key_constraint(table,'store_code')
 
         except Exception as e:
             print(f"Failed to execute {e}")  
-        cur.close()                 
-                
+        cur.close()
+
+    def run(self):
+        self.clean_user_data()
+        self.clean_card_data()
+        self.clean_store_data()
+        self.clean_product_data()
+        self.clean_orders_data()
+        self.clean_date_times()
+
+        self.alter_order_table_dtype()
+        self.alter_dim_users_table_dtype()
+        self.alter_store_details_dtype()
+        self.alter_dim_products_table()
+        self.alter_dim_date_times_dtype()
+        self.alter_dim_card_details_dtype()
+        
+        self.update_tables_primary_key()
+                                        
 if __name__ == "__main__":                      
     data = DataCleaning()
-    # clean = data.clean_orders_data()
-    products = data.create_dim_tables_primary_key()
-
-    # if products is not None:
-    #     print(products)
-    #     print(products.head())
-    #     # print(products['card_number'])
-    #     # print(products['store_code'])
-    # else:
-    #     print("Failed to extract data")
+    data.run()
