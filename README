@@ -1,9 +1,26 @@
-** Project Title
+** Data Centralisation Project
 
-A description of the project: what it does, the aim of the project, and what you learned
+In this project, we create a local PostgreSQL database. We upload data from various sources, process it, create a database schema and run SQL queries.
 
-Installation instructions
+Key technologies used: Postgres, AWS (s3), boto3, rest-API, csv, Python (Pandas).
 
-Usage instructions
+* Project Utils
 
-File structure of the project
+- Data extraction. In "data_extraction.py" we store methods responsible for the upload of data into pandas data frame from different sources.
+- Data cleaning. In "data_cleaning.py" we develop the class DataCleaning that clean different tables, which we uploaded in "data_extraction.py".
+- Uploading data into the database. We write DatabaseConnector class "database_utils.py", which initiates the database engine based on credentials provided in ".yml" file.
+- "main.py" contains methods, which allow uploading data directly into the local database.
+
+* Step by Step Data Processing
+
+- Utilize a distant Postgres database hosted in the AWS Cloud. The focal point of the client's attention is the "order_table," which holds crucial sales data. Within this table, it is imperative to focus on specific fields, namely "date_uuid," "user_uuid," "card_number," "store_code," "product_code," and "product_quantity." To establish these as foreign keys in our database, it is essential to eliminate any NaNs or missing values from the first five fields. Additionally, ensure that the "product_quantity" field is cast as an integer for accurate representation.
+
+- Leverage a distant Postgres database hosted on the AWS Cloud for the user's data, specifically the "dim_users" table. Employ identical upload techniques as in the previous scenario, considering that this table is also stored remotely. Recognize the "user_uuid" field as the primary key for this table.
+
+- Establish a public link within the AWS Cloud for access to the "dim_card_details." This data is retrievable through a link from the S3 server and is stored in a ".pdf" file format. Employ the "tabula" package for reading the ".pdf" file. Recognize the primary key as the card number, which should be converted into a string to prevent potential issues and cleaned of any "?" artifacts.
+
+- Access the AWS S3 bucket containing the "dim_product" table using the boto3 package for data retrieval. Acknowledge the primary key as the "product code" field. Convert the "product_price" field into a float number, and standardize the "weight" field into grams, accounting for variations such as ("kg," "oz," "l," "ml").
+
+- Utilize the RESTful API to access "dim_store_details" data through the GET method. Convert the ".json" response into a Pandas dataframe, with the "store_code" field serving as the primary key.
+
+- Access the "dim_date_times" data through a provided link. Convert the ".json" response into a Pandas dataframe, with the "date_uuid" field identified as the primary key.
