@@ -1,17 +1,17 @@
-** Data Centralisation Project
+# Data Centralisation Project
 
 In this project, we create a local PostgreSQL database. We upload data from various sources, process it, create a database schema and run SQL queries.
 
 Key technologies used: Postgres, AWS (s3), boto3, rest-API, csv, Python (Pandas).
 
-* Project Utils
+## Project Utils
 
 - Data extraction. In "data_extraction.py" we store methods responsible for the upload of data into pandas data frame from different sources.
 - Data cleaning. In "data_cleaning.py" we develop the class DataCleaning that clean different tables, which we uploaded in "data_extraction.py".
 - Uploading data into the database. We write DatabaseConnector class "database_utils.py", which initiates the database engine based on credentials provided in ".yml" file.
 - "main.py" contains methods, which allow uploading data directly into the local database.
 
-* Step by Step Data Processing
+## Step by Step Data Processing
 
 - Utilize a distant Postgres database hosted in the AWS Cloud. The focal point of the client's attention is the "order_table," which holds crucial sales data. Within this table, it is imperative to focus on specific fields, namely "date_uuid," "user_uuid," "card_number," "store_code," "product_code," and "product_quantity." To establish these as foreign keys in our database, it is essential to eliminate any NaNs or missing values from the first five fields. Additionally, ensure that the "product_quantity" field is cast as an integer for accurate representation.
 
